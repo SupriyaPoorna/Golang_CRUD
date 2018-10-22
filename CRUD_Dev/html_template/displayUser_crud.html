@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title> Display </title>
+    </head>
+    <body>
+        <h3>Users</h3>
+        <table cellspacing="15" >
+            <thead>
+                <tr>
+                  <th>ID</th> 
+                  <th>First Name</th>
+                  <th>Last Name </th>
+                  <th>View</th>
+                  <th>Edit </th>
+                  <th>Delete</th>
+                </tr>
+            </thead>
+            <tbody>
+              {{ range . }}
+                <tr>
+                  <td>{{ .Id }}</td>
+                  <td> {{ .FName }} </td>
+                  <td> {{ .LName }} </td>
+                  <td><a href="/show?id={{ .Id }}">View</a></td>
+                  <td><a href="/edit?id={{ .Id }}">Edit</a></td>
+                  <td><a href="/delete?id={{ .Id }}">Delete</a><td>
+                </tr>
+              {{ end }}
+            </tbody>
+        </table>
+    </body>
+</html>

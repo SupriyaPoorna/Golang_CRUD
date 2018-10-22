@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title> Update User </title>
+    </head>
+    <body>
+        <h3>Update</h3>
+        <form action="/update_user" method="POST">
+            ID         :  <input type="text" name="id" value = "{{.Id}}"><br> <br> 
+            First name :  <input type="text" name="firstname" value = "{{.FName}}"><br> <br> 
+            Last name  :  <input type="text" name="lastname" value = "{{.LName}}"><br> <br>
+            Email ID   :  <input type="text" name="email" value = "{{.Email}}"><br> <br>	
+            Password   :  <input type="password" name="password"value = "{{.Pwd}}"><br><br>
+            <input type="submit" value="UPDATE">
+        </form>
+    </body>
+</html>

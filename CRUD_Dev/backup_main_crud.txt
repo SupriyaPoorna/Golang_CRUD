@@ -1,0 +1,232 @@
+package main
+
+import(
+	"net/http"
+	"html/template"
+	"database/sql"
+    _ "github.com/go-sql-driver/mysql"	
+	"log"
+	//"strconv"
+)
+
+var tpl *template.Template
+
+type User struct{
+	Id int
+	FName string
+	LName string
+	Email string
+	Pwd string
+}
+
+func init(){
+	tpl = template.Must(template.ParseGlob("html_template/*.html"))
+}
+
+func db_conn()(db *sql.DB){
+	db, err := sql.Open("mysql", "root:Password@(127.0.0.1:3306)/mydatabase")
+	err = db.Ping()
+  	 if err != nil {
+	   log.Fatal(err)
+   
+	}
+	return db
+}
+
+func main(){
+	http.HandleFunc("/", index)
+	http.HandleFunc("/nav_addUser",naviagteToAddpage)
+	http.HandleFunc("/add_user",addUser)
+	http.HandleFunc("/nav_displayUser",display_users)
+	http.HandleFunc("/show",view_par_user)
+	http.HandleFunc("/edit",edit_user)
+	http.HandleFunc("/delete",delete_user)
+	http.HandleFunc("/update_user",update_user)
+	http.ListenAndServe(":8080",nil)
+}
+
+func index(w http.ResponseWriter, r *http.Request){
+	tpl.ExecuteTemplate(w, "index_crud.html", nil)
+} 
+
+func naviagteToAddpage(w http.ResponseWriter, r *http.Request){
+	tpl.ExecuteTemplate(w, "addUser_crud.html", nil)
+
+}
+
+func addUser(w http.ResponseWriter, r *http.Request){
+	log.Println("inside add")
+	if r.Method != "POST" {
+		http.Redirect(w,r,"/",http.StatusSeeOther)
+		return
+	}
+	
+	fname := r.FormValue("firstname")
+	lname := r.FormValue("lastname")
+	email := r.FormValue("email")
+	pwd := r.FormValue("password")
+	
+	d := struct{
+		First string
+		Last string
+		Email string
+		Pwd string
+	}{
+		First : fname,
+		Last : lname,
+		Email : email,
+		Pwd : pwd,
+	}
+	db := db_conn()
+	
+	n, err := db.Prepare("insert into crud_new(firstName,lastName,email,password) values(?,?,?,?)")
+	if err!=nil{
+		log.Fatal(err)
+	}else {
+		n.Exec( d.First, d.Last, d.Email, d.Pwd)	
+		log.Println(n)
+		display_users(w, r)
+		//tpl.ExecuteTemplate(w, "displayUser_crud.html", d)
+	}
+
+ 	defer db.Close()	
+}
+
+func display_users(w http.ResponseWriter, r *http.Request){
+	log.Println("inside display users")
+	db := db_conn()
+    selDB, err := db.Query("SELECT * FROM crud_new ORDER BY id ASC")
+    if err != nil {
+		log.Println("err")
+		panic(err.Error())
+		
+    }
+    usr := User{}
+    res := []User{}
+    for selDB.Next() {
+        var id int
+        var fname, lname, email, pwd string
+        err = selDB.Scan(&id, &fname, &lname, &email, &pwd)
+        if err != nil {
+            panic(err.Error())
+        }
+        usr.Id = id
+        usr.FName = fname
+		usr.LName = lname
+		usr.Email = email
+        res = append(res, usr)
+    }
+
+	tpl.ExecuteTemplate(w, "displayUser_crud.html", res)
+	defer db.Close()
+	
+}
+
+func view_par_user(w http.ResponseWriter, r *http.Request){
+	log.Println("inside view particular user details")
+	db := db_conn()
+	nID := r.URL.Query().Get("id")
+	selDB, err := db.Query("SELECT * FROM crud_new where id = ?", nID)
+	if err != nil {
+        panic(err.Error())
+	}
+	usr := User{}
+	var id int
+	var fname, lname, email, pwd string
+	
+    for selDB.Next() {
+		err = selDB.Scan(&id, &fname, &lname, &email, &pwd)
+		
+		if err != nil {
+			panic(err.Error())
+		}
+
+		usr.Id = id
+		usr.FName = fname
+		usr.LName = lname
+		usr.Email = email
+	
+	}
+	tpl.ExecuteTemplate(w, "showParticularUser_crud.html", usr)
+	defer db.Close()
+	
+}
+
+func edit_user(w http.ResponseWriter, r *http.Request){
+	log.Println("inside edit users ")
+	db := db_conn()
+	nID := r.URL.Query().Get("id")
+	selDB, err := db.Query("SELECT * FROM crud_new where id = ?", nID)
+	if err != nil {
+        panic(err.Error())
+	}
+	usr := User{}
+	var id int
+	var fname, lname, email, pwd string
+	
+    for selDB.Next() {
+		err = selDB.Scan(&id, &fname, &lname, &email, &pwd)
+		
+		if err != nil {
+			panic(err.Error())
+		}
+
+		usr.Id = id
+		usr.FName = fname
+		usr.LName = lname
+		usr.Email = email
+		usr.Pwd = pwd
+	}
+	tpl.ExecuteTemplate(w, "editUser_crud.html", usr)
+	defer db.Close()
+}
+
+func update_user(w http.ResponseWriter, r *http.Request){
+	log.Println("inside update users ")
+	if r.Method != "POST" {
+		http.Redirect(w,r,"/",http.StatusSeeOther)
+		return
+	}
+
+	id :=  r.FormValue("id")
+	fname := r.FormValue("firstname")
+	lname := r.FormValue("lastname")
+	email := r.FormValue("email")
+	pwd := r.FormValue("password")
+	
+	usr := User{}
+	
+	
+	usr.FName = fname
+	usr.LName = lname
+	usr.Email = email
+	usr.Pwd = pwd
+	
+	db := db_conn()
+	n, err := db.Prepare("UPDATE crud_new SET firstName=?, lastName=?,email=?, password =?  WHERE id=?")
+	if err!=nil{
+		log.Fatal(err)
+	}else {
+		n.Exec( usr.FName, usr.LName, usr.Email, usr.Pwd, id)	
+		log.Println(n)
+		display_users(w, r)
+		//tpl.ExecuteTemplate(w, "displayUser_crud.html", d)
+	}
+
+ 	defer db.Close()
+
+}
+
+func delete_user(w http.ResponseWriter, r *http.Request){
+	log.Println("inside delete users")
+	db := db_conn()
+	nID := r.URL.Query().Get("id")
+	delForm, err := db.Prepare("DELETE FROM crud_new WHERE id=?")
+    if err != nil {
+        panic(err.Error())
+    }
+    delForm.Exec(nID)
+	log.Println("DELETE")
+	display_users(w, r)
+    defer db.Close()
+}
